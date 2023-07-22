@@ -1,6 +1,7 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Models\User;
+use App\Services\OpenWeatherService;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,4 +20,11 @@ Route::get('/', function () {
         'message' => 'all systems are a go',
         'users' => \App\Models\User::all(),
     ]);
+});
+
+Route::get('users', function () {
+});
+
+Route::get('forecast/{user}', function (User $user, OpenWeatherService $service) {
+    dd($service->getForecastWeatherByUserCoords($user->latitude, $user->longitude));
 });
