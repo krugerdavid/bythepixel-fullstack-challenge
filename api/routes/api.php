@@ -1,7 +1,6 @@
 <?php
 
-use App\Models\User;
-use App\Services\OpenWeatherService;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -22,9 +21,6 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('users', function () {
-});
+Route::get('users', [UserController::class, 'index'])->name('user.index');
 
-Route::get('forecast/{user}', function (User $user, OpenWeatherService $service) {
-    dd($service->getForecastWeatherByUserCoords($user->latitude, $user->longitude));
-});
+Route::get('users/{user}/forecast', [UserController::class, 'getForecastByUser'])->name('user.forecast');

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\OpenWeatherService;
+use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
@@ -14,8 +15,14 @@ class UserController extends Controller
         return UserResource::collection(User::all());
     }
 
-    public function getForecastWeather($user, OpenWeatherService $service)
+    public function getForecastByUser(User $user, OpenWeatherService $service)
     {
-        return $service->getForecastWeatherByUserCoords($user->latitude, $user->longitude);
+        $forecast = Cache::remember("user_{$user->id}_forecast", now()->addMinutes(60), function () use ($user, $service) {
+            return $service->getForecastWeatherByUserCoords($user->latitude, $user->longitude);
+        });
+
+        return response()->json([
+            'weather' => $forecast,
+        ]);
     }
 }

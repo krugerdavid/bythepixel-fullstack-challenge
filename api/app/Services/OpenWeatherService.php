@@ -15,6 +15,8 @@ class OpenWeatherService
 
     private $api_endpoint_icons_ext = null;
 
+    private $api_endpoint_onecall = null;
+
     private $api_lang = null;
 
     private $format_date = null;
@@ -29,6 +31,8 @@ class OpenWeatherService
     {
         $this->api_key = Config::get('openweather.api_key');
         $this->api_endpoint_forecast = Config::get('openweather.api_endpoint_forecast');
+        $this->api_endpoint_onecall = Config::get('openweather.api_endpoint_onecall');
+
         $this->api_endpoint_icons = Config::get('openweather.api_endpoint_icons');
         $this->api_endpoint_icons_ext = Config::get('openweather.api_endpoint_icons_ext');
         $this->api_lang = Config::get('openweather.api_lang');
@@ -50,9 +54,10 @@ class OpenWeatherService
     {
         $this->format_units = $units;
 
-        return $this->getForecastWeather([
+        return $this->getOnecallWeather([
             'lat' => $latitude,
             'lon' => $longitude,
+            'exclude' => 'minutely,hourly',
             'units' => $units,
             'lang' => $this->api_lang,
             'appid' => $this->api_key,
@@ -115,7 +120,7 @@ class OpenWeatherService
                     'id' => $item['weather'][0]['id'],
                     'name' => $item['weather'][0]['main'],
                     'desc' => $item['weather'][0]['description'],
-                    'icon' => $this->api_endpoint_icons.$item['weather'][0]['icon'].'.'.$this->api_endpoint_icons_ext,
+                    'icon' => $this->api_endpoint_icons.$item['weather'][0]['icon'].'@2x.'.$this->api_endpoint_icons_ext,
                 ],
                 'wind' => [
                     'speed' => $item['wind']['speed'],
@@ -148,6 +153,116 @@ class OpenWeatherService
                 'longitude' => $struct['city']['coord']['lon'],
             ],
             'forecast' => $forecast,
+        ];
+    }
+
+    /**
+     * Returns an OpenWeather API response for onecall weather.
+     * Returns FALSE on failure.
+     *
+     * @param  array  $params Array of request parameters.
+     * @return array|bool
+     */
+    private function getOnecallWeather(array $params)
+    {
+        $params = http_build_query($params);
+        $request = $this->api_endpoint_onecall.$params;
+        $response = $this->doRequest($request);
+        if (! $response) {
+            return false;
+        }
+        $response = $this->parseOnecallResponse($response);
+        if (! $response) {
+            return false;
+        }
+
+        return $response;
+    }
+
+    private function parseOnecallResponse(string $response)
+    {
+        $struct = json_decode($response, true);
+        if (! isset($struct['cod']) || $struct['cod'] != 200) {
+            // @TODO right now there is no cod element to check in the API response
+        }
+
+        $current = [];
+        if (isset($struct['current'])) {
+            $current['datetime'] = [
+                'timestamp' => $struct['current']['dt'],
+                'formatted_date' => date($this->format_date, $struct['current']['dt']),
+                'formatted_day' => date($this->format_day, $struct['current']['dt']),
+                'formatted_time' => date($this->format_time, $struct['current']['dt']),
+            ];
+            $current['condition'] = [
+                'id' => $struct['current']['weather'][0]['id'],
+                'name' => $struct['current']['weather'][0]['main'],
+                'desc' => $struct['current']['weather'][0]['description'],
+                'icon' => $this->api_endpoint_icons.$struct['current']['weather'][0]['icon'].'.'.$this->api_endpoint_icons_ext,
+            ];
+            $current['wind'] = [
+                'speed' => $struct['current']['wind_speed'],
+                'deg' => $struct['current']['wind_deg'],
+                'direction' => $this->getDirection($struct['current']['wind_deg']),
+            ];
+            $current['forecast'] = [
+                'temp' => round($struct['current']['temp']),
+                'pressure' => round($struct['current']['pressure']),
+                'humidity' => round($struct['current']['humidity']),
+            ];
+        }
+
+        $daily = [];
+        if (isset($struct['daily'])) {
+            foreach ($struct['daily'] as $item) {
+                $daily[] = [
+                    'datetime' => [
+                        'timestamp' => $item['dt'],
+                        'timestamp_sunrise' => $item['sunrise'],
+                        'timestamp_sunset' => $item['sunset'],
+                        'formatted_date' => date($this->format_date, $item['dt']),
+                        'formatted_day' => date($this->format_day, $item['dt']),
+                        'formatted_time' => date($this->format_time, $item['dt']),
+                        'formatted_sunrise' => date($this->format_time, $item['sunrise']),
+                        'formatted_sunset' => date($this->format_time, $item['sunset']),
+                    ],
+                    'condition' => [
+                        'id' => $item['weather'][0]['id'],
+                        'name' => $item['weather'][0]['main'],
+                        'desc' => $item['weather'][0]['description'],
+                        'icon' => $this->api_endpoint_icons.$item['weather'][0]['icon'].'@2x.'.$this->api_endpoint_icons_ext,
+                    ],
+                    'wind' => [
+                        'speed' => $item['wind_speed'],
+                        'deg' => $item['wind_deg'],
+                        'direction' => $this->getDirection($item['wind_deg']),
+                    ],
+                    'forecast' => [
+                        'temp' => round($item['temp']['day']),
+                        'temp_min' => round($item['temp']['min']),
+                        'temp_max' => round($item['temp']['max']),
+                        'pressure' => round($item['pressure']),
+                        'humidity' => round($item['humidity']),
+                    ],
+                ];
+            }
+            $forecast['daily'] = $daily;
+        }
+
+        return [
+            'formats' => [
+                'lang' => $this->api_lang,
+                'date' => $this->format_date,
+                'day' => $this->format_day,
+                'time' => $this->format_time,
+                'units' => $this->format_units,
+            ],
+            'location' => [
+                'latitude' => $struct['lat'],
+                'longitude' => $struct['lon'],
+            ],
+            'current' => $current,
+            'daily' => $daily,
         ];
     }
 

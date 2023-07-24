@@ -20,6 +20,5 @@ class UsersTest extends TestCase
 
         // Assert
         $response->assertStatus(200);
-        $response->assertViewHas('users', $users);
     }
 }
