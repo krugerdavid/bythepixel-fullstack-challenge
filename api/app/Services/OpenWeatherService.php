@@ -198,7 +198,7 @@ class OpenWeatherService
                 'id' => $struct['current']['weather'][0]['id'],
                 'name' => $struct['current']['weather'][0]['main'],
                 'desc' => $struct['current']['weather'][0]['description'],
-                'icon' => $this->api_endpoint_icons.$struct['current']['weather'][0]['icon'].'.'.$this->api_endpoint_icons_ext,
+                'icon' => $this->api_endpoint_icons.$struct['current']['weather'][0]['icon'].'@2x.'.$this->api_endpoint_icons_ext,
             ];
             $current['wind'] = [
                 'speed' => $struct['current']['wind_speed'],
