@@ -5,6 +5,11 @@ namespace App\Services;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Service as a wrapper for the Openweather API
+ * Based on the Openweather Package
+ * https://github.com/dnsimmons/openweather/tree/master
+ */
 class OpenWeatherService
 {
     private $api_key = null;

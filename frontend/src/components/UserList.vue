@@ -9,7 +9,8 @@ export default {
     data: () => ({
         userList: null,
         selectedUser: null,
-        userForecast: null
+        userForecast: null,
+        hasError: false
     }),
 
     components: {
@@ -33,9 +34,18 @@ export default {
             this.userForecast = null;
 
             const url = `http://localhost/users/${user.id}/forecast`
-            const res = await (await fetch(url)).json();
 
-            this.userForecast = res;
+            try {
+                const res = await fetch(url);
+                this.userForecast = await res.json();
+
+            } catch (error) {
+                this.hasError = true;
+                console.log('There was an error', error);
+            }
+
+
+
             console.log({ res });
         }
 
@@ -78,14 +88,18 @@ export default {
         </div>
         <div class="col-span-1 overflow-hidden">
             <skeleton-weather title="Weather Forecast" content="Select an user to check their current weather forecast "
-                v-if="!selectedUser && !userForecast"></skeleton-weather>
+                v-if="!selectedUser && !userForecast && !hasError"></skeleton-weather>
 
             <skeleton-weather :title="'Loading weather forecast for ' + selectedUser.name"
-                v-if="selectedUser && !userForecast"></skeleton-weather>
+                v-if="selectedUser && !userForecast && !hasError"></skeleton-weather>
 
 
-            <weather :weather="userForecast?.weather" :user="selectedUser" v-if="selectedUser && userForecast" />
+            <weather :weather="userForecast?.weather" :user="selectedUser"
+                v-if="selectedUser && userForecast && !hasError" />
 
+            <skeleton-weather :title="'Can\'t fetch weather forecast for ' + selectedUser.name"
+                content="There was an error during the request. Please try again."
+                v-if="selectedUser && hasError"></skeleton-weather>
 
 
         </div>
