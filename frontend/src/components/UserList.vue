@@ -8,9 +8,10 @@ import Weather from '@/components/Weather.vue'
 export default {
     data: () => ({
         userList: null,
+        hasUsersListError: false,
         selectedUser: null,
         userForecast: null,
-        hasError: false
+        hasForecastError: false
     }),
 
     components: {
@@ -26,7 +27,20 @@ export default {
     methods: {
         async fetchUsers() {
             const url = 'http://localhost/users'
-            this.userList = await (await fetch(url)).json()
+            try {
+                const res = await fetch(url);
+                this.userList = await res.json()
+
+            } catch (error) {
+                this.hasUsersListError = true;
+                if (error instanceof SyntaxError) {
+                    // Unexpected token < in JSON
+                    console.log('There was a SyntaxError', error);
+                } else {
+                    console.log('There was an error', error);
+                }
+            }
+
         },
 
         async fetchUserForecast(user) {
@@ -40,13 +54,14 @@ export default {
                 this.userForecast = await res.json();
 
             } catch (error) {
-                this.hasError = true;
-                console.log('There was an error', error);
+                this.hasForecastError = true;
+                if (error instanceof SyntaxError) {
+                    // Unexpected token < in JSON
+                    console.log('There was a SyntaxError', error);
+                } else {
+                    console.log('There was an error', error);
+                }
             }
-
-
-
-            console.log({ res });
         }
 
     }
@@ -60,13 +75,13 @@ export default {
             <h1 class="mt-3 px-5 border-b border-gray-200 pb-3 text-2xl font-semibold tracking-tight text-slate-800">Users
             </h1>
 
-            <div v-if="!userList" class="overflow-y-scroll">
+            <div v-if="!userList && !hasUsersListError" class="overflow-y-scroll">
                 <ul class="divide-y divide-gray-200 animate-pulse">
                     <skeleton-user v-for="n in 5"></skeleton-user>
                 </ul>
             </div>
 
-            <div v-if="userList" class="w-full">
+            <div v-if="userList && !hasUsersListError" class="w-full">
                 <ul class="divide-y divide-gray-200">
                     <li v-for="user in userList.data" class="flex items-center justify-between gap-x-6 py-3 px-5"
                         :class="{ 'bg-slate-100': selectedUser && selectedUser.id === user.id }">
@@ -85,21 +100,35 @@ export default {
                     </li>
                 </ul>
             </div>
+
+            <div v-if="hasUsersListError" class="h-full">
+                <div class="flex flex-col text-center justify-center items-center h-full">
+
+                    <svg class="mx-auto h-14 w-14 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+
+                    <h3 class="mt-2 text-sm font-semibold text-gray-900">Can't fetch users.</h3>
+                    <p class="mt-1 text-sm text-gray-500">There was an error during the request.</p>
+                </div>
+            </div>
         </div>
         <div class="col-span-1 overflow-hidden">
             <skeleton-weather title="Weather Forecast" content="Select an user to check their current weather forecast "
-                v-if="!selectedUser && !userForecast && !hasError"></skeleton-weather>
+                v-if="!selectedUser && !userForecast && !hasForecastError"></skeleton-weather>
 
             <skeleton-weather :title="'Loading weather forecast for ' + selectedUser.name"
-                v-if="selectedUser && !userForecast && !hasError"></skeleton-weather>
+                v-if="selectedUser && !userForecast && !hasForecastError"></skeleton-weather>
 
 
             <weather :weather="userForecast?.weather" :user="selectedUser"
-                v-if="selectedUser && userForecast && !hasError" />
+                v-if="selectedUser && userForecast && !hasForecastError" />
 
             <skeleton-weather :title="'Can\'t fetch weather forecast for ' + selectedUser.name"
                 content="There was an error during the request. Please try again."
-                v-if="selectedUser && hasError"></skeleton-weather>
+                v-if="selectedUser && hasForecastError"></skeleton-weather>
 
 
         </div>
