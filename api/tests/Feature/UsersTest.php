@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class UsersTest extends TestCase
@@ -14,11 +16,15 @@ class UsersTest extends TestCase
     {
         // Arrange
         $users = User::factory(20)->create();
+        $userResources = UserResource::collection(User::all());
+        $request = Request::create('/users', 'GET');
 
         // Act
-        $response = $this->withoutExceptionHandling()->get('/users');
+        $response = $this->getJson('/users');
 
         // Assert
-        $response->assertStatus(200);
+        $response->assertStatus(200)->assertJson(
+            $userResources->response($request)->getData(true)
+        );
     }
 }

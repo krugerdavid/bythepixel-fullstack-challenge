@@ -21,6 +21,6 @@ class OpenWeatherAPITest extends TestCase
         $response = $weatherService->getForecastWeatherByUserCoords($user->latitude, $user->longitude);
 
         // Assert
-        $this->assertArrayHasKey('forecast', $response);
+        $this->assertArrayHasKey('current', $response);
     }
 }
